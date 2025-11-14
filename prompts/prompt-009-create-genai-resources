@@ -1,2 +1,6 @@
-create the Azure resources needed for a generative AI chat like user interface including any new azure resource IaC, endpoints, keys etc but try to use managed identity where possible 
-store the settings for this new resoruce in a GenAISettings file
+create the Azure resources needed for a generative AI chat like user interface including any new azure resource IaC, 
+endpoints, keys etc but try to use managed identity where possible 
+
+use low cost dev SKUs where possible
+
+store the settings for these new resources in a GenAISettings file
