@@ -3,6 +3,7 @@ This is the order in which the coding agent should read and work on the prompts:
 prompt-006-baseline-script-instruction,
 prompt-001-create-app-service,
 prompt-004-create-app-code,
-prompt-005-deploy-app-code
+prompt-005-deploy-app-code,
+prompt-007-add-api-code
 
 If the agent cant find the exact named matching file it shuld not try to make up any text or code and skip to the next one
