@@ -1,0 +1,10 @@
+Follow this deployment order including the 30 second wait to ensure each step has the resource before it ready:
+
+1. Deploy the resource group, App Service, and SQL Database (currently running)
+2. Configure App Service settings
+3. Wait 30 seconds for SQL Server to be fully ready
+4. Add IP for the local user’s machine to the firewall
+5. Install Python dependencies
+6. Import the database schema
+7. Configure database roles for the managed identity
+8. Deploy the application code
