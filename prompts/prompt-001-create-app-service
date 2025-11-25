@@ -2,3 +2,5 @@ create the bicep code needed to deploy an app service instance to azure in UKSOU
 use standard S1 SKU to avoid cold start when deploying and starting the site
 
 make sure all bicep files use lower case names for all azure resources not upper case ever.
+
+delete this after...
