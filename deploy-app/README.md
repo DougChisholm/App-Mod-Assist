@@ -47,8 +47,10 @@ Compress-Archive -Path ./publish/* -DestinationPath ./app.zip
 ### Step 4: Deploy to Azure
 
 ```powershell
-az webapp deploy --resource-group $resourceGroup --name $webAppName --src-path ./app.zip
+az webapp deploy --resource-group $resourceGroup --name $webAppName --src-path ./app.zip --type zip --clean true --restart true
 ```
+
+> **Note**: The `--clean true` flag removes old files, and `--restart true` ensures the app restarts after deployment.
 
 ### Step 5: Configure App Settings (if not done during infrastructure deployment)
 

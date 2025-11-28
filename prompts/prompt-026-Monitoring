@@ -1,0 +1,1 @@
+Deploy Azure Monitor and ensure all resources have diagnostic settings enabled in line with best practices.  Also ensure that the activity log of the subscription and any resource groups are also logging to Azure Monitor so any deployment failures can be analysed.

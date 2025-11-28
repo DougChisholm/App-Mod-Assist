@@ -112,22 +112,35 @@ az sql server firewall-rule create --resource-group $resourceGroup --server $sql
 ```powershell
 $sqlServerName = (az deployment group show --resource-group $resourceGroup --name main --query "properties.outputs.sqlServerName.value" -o tsv)
 
-# Using the Python script for schema import (recommended)
-pip3 install --quiet pyodbc azure-identity
-python3 run-sql.py
+# Option A: Using go-sqlcmd (recommended - install with: winget install sqlcmd)
+sqlcmd -S "$sqlServerName.database.windows.net" -d "Northwind" --authentication-method=ActiveDirectoryDefault -i "Database-Schema/database_schema.sql"
+
+# Option B: Using legacy sqlcmd with access token (if go-sqlcmd not installed)
+$token = az account get-access-token --resource=https://database.windows.net/ --query accessToken -o tsv
+sqlcmd -S "$sqlServerName.database.windows.net" -d "Northwind" -P "$token" -U " " -G -i "Database-Schema/database_schema.sql"
 ```
 
 ### Step 7: Configure Database Roles for Managed Identity
 
 ```powershell
-# Update the script.sql with the managed identity name
 $managedIdentityName = (az deployment group show --resource-group $resourceGroup --name main --query "properties.outputs.managedIdentityName.value" -o tsv)
+$sqlServerName = (az deployment group show --resource-group $resourceGroup --name main --query "properties.outputs.sqlServerName.value" -o tsv)
+$serverFqdn = "$sqlServerName.database.windows.net"
 
-# Using cross-platform sed (works on Mac and Linux)
-sed -i.bak "s/MANAGED-IDENTITY-NAME/$managedIdentityName/g" script.sql; rm -f script.sql.bak
+# Option A: Using go-sqlcmd (recommended)
+sqlcmd -S $serverFqdn -d "Northwind" --authentication-method=ActiveDirectoryDefault -Q "IF EXISTS (SELECT * FROM sys.database_principals WHERE name = '$managedIdentityName') DROP USER [$managedIdentityName];"
+sqlcmd -S $serverFqdn -d "Northwind" --authentication-method=ActiveDirectoryDefault -Q "CREATE USER [$managedIdentityName] FROM EXTERNAL PROVIDER;"
+sqlcmd -S $serverFqdn -d "Northwind" --authentication-method=ActiveDirectoryDefault -Q "ALTER ROLE db_datareader ADD MEMBER [$managedIdentityName];"
+sqlcmd -S $serverFqdn -d "Northwind" --authentication-method=ActiveDirectoryDefault -Q "ALTER ROLE db_datawriter ADD MEMBER [$managedIdentityName];"
+sqlcmd -S $serverFqdn -d "Northwind" --authentication-method=ActiveDirectoryDefault -Q "GRANT EXECUTE TO [$managedIdentityName];"
 
-# Run the Python script
-python3 run-sql-dbrole.py
+# Option B: Using legacy sqlcmd with access token
+$token = az account get-access-token --resource=https://database.windows.net/ --query accessToken -o tsv
+sqlcmd -S $serverFqdn -d "Northwind" -P $token -U " " -G -Q "IF EXISTS (SELECT * FROM sys.database_principals WHERE name = N'$managedIdentityName') DROP USER [$managedIdentityName];"
+sqlcmd -S $serverFqdn -d "Northwind" -P $token -U " " -G -Q "CREATE USER [$managedIdentityName] FROM EXTERNAL PROVIDER;"
+sqlcmd -S $serverFqdn -d "Northwind" -P $token -U " " -G -Q "ALTER ROLE db_datareader ADD MEMBER [$managedIdentityName];"
+sqlcmd -S $serverFqdn -d "Northwind" -P $token -U " " -G -Q "ALTER ROLE db_datawriter ADD MEMBER [$managedIdentityName];"
+sqlcmd -S $serverFqdn -d "Northwind" -P $token -U " " -G -Q "GRANT EXECUTE TO [$managedIdentityName];"
 ```
 
 ### Step 8: (If GenAI deployed) Configure App Service with OpenAI Settings
