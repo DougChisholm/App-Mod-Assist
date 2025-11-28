@@ -68,3 +68,9 @@ output sqlServerFqdn string = sqlServer.properties.fullyQualifiedDomainName
 
 @description('The name of the database')
 output databaseName string = sqlDatabase.name
+
+@description('The resource ID of the SQL Server')
+output sqlServerId string = sqlServer.id
+
+@description('The resource ID of the SQL Database')
+output sqlDatabaseId string = sqlDatabase.id

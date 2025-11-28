@@ -54,6 +54,18 @@ module genAI 'modules/genai.bicep' = if (deployGenAI) {
   }
 }
 
+// Deploy Monitoring resources (Azure Monitor, Log Analytics, Application Insights)
+module monitoring 'modules/monitoring.bicep' = {
+  name: 'monitoringDeployment'
+  params: {
+    location: location
+    baseName: baseName
+    appServiceId: appService.outputs.webAppId
+    sqlServerId: azureSQL.outputs.sqlServerId
+    sqlDatabaseId: azureSQL.outputs.sqlDatabaseId
+  }
+}
+
 // Outputs
 @description('The name of the web app')
 output webAppName string = appService.outputs.webAppName
@@ -88,3 +100,22 @@ output openAIModelName string = deployGenAI ? genAI.outputs.openAIModelName : ''
 
 @description('The Azure AI Search endpoint')
 output searchEndpoint string = deployGenAI ? genAI.outputs.searchEndpoint : ''
+
+// Monitoring outputs
+@description('The Log Analytics Workspace ID')
+output logAnalyticsWorkspaceId string = monitoring.outputs.logAnalyticsWorkspaceId
+
+@description('The Log Analytics Workspace name')
+output logAnalyticsWorkspaceName string = monitoring.outputs.logAnalyticsWorkspaceName
+
+@description('The Application Insights ID')
+output appInsightsId string = monitoring.outputs.appInsightsId
+
+@description('The Application Insights name')
+output appInsightsName string = monitoring.outputs.appInsightsName
+
+@description('The Application Insights instrumentation key')
+output appInsightsInstrumentationKey string = monitoring.outputs.appInsightsInstrumentationKey
+
+@description('The Application Insights connection string')
+output appInsightsConnectionString string = monitoring.outputs.appInsightsConnectionString

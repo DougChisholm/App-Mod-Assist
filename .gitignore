@@ -3,6 +3,9 @@ bin/
 obj/
 publish/
 
+# Compiled ARM templates from Bicep (deploy-infra/*.json except parameters.json)
+deploy-infra/main.json
+
 # IDE files
 .vs/
 .vscode/

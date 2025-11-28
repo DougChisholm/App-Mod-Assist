@@ -29,8 +29,9 @@ Resources must be deployed in this specific order (handled automatically by Bice
 1. **Managed Identity** - Created first as other resources depend on it
 2. **App Service** - Uses the managed identity for authentication
 3. **Azure SQL Server & Database** - Configured with Entra ID authentication
-4. **Azure OpenAI** (optional) - Needs managed identity for role assignment
-5. **Azure AI Search** (optional) - Needs managed identity for role assignment
+4. **Monitoring (Azure Monitor)** - Log Analytics Workspace and Application Insights with diagnostic settings for all resources
+5. **Azure OpenAI** (optional) - Needs managed identity for role assignment
+6. **Azure AI Search** (optional) - Needs managed identity for role assignment
 
 ### Phase 2: Post-Deployment Configuration
 
@@ -175,8 +176,82 @@ The infrastructure includes:
 - **User-Assigned Managed Identity**: For secure authentication between services
 - **App Service (S1)**: Hosts the ASP.NET application
 - **Azure SQL Database (Basic)**: Stores expense data with Entra ID authentication only
+- **Azure Monitor (Log Analytics & Application Insights)**: Centralized logging, diagnostics, and application performance monitoring for all resources
 - **Azure OpenAI (Optional)**: GPT-4o model for chat functionality
 - **Azure AI Search (Optional)**: For RAG pattern support
+
+## Monitoring
+
+The deployment automatically provisions Azure Monitor resources and configures diagnostic settings:
+
+### Resources Created
+
+| Resource | Purpose |
+|----------|---------|
+| Log Analytics Workspace | Centralized log storage and analysis |
+| Application Insights | Application performance monitoring (APM) |
+
+### Diagnostic Settings Enabled
+
+The following diagnostic settings are automatically configured:
+
+**App Service**:
+- HTTP Logs
+- Console Logs
+- Application Logs
+- Audit Logs
+- Platform Logs
+- All Metrics
+
+**Azure SQL Server**:
+- Security Audit Events
+- DevOps Operations Audit
+- All Metrics
+
+**Azure SQL Database**:
+- SQL Insights
+- Automatic Tuning
+- Query Store Runtime Statistics
+- Query Store Wait Statistics
+- Errors, Timeouts, Blocks, Deadlocks
+- Basic, Instance and App Advanced, Workload Management Metrics
+
+### Viewing Logs and Metrics
+
+After deployment, you can view logs and metrics in the Azure Portal:
+
+1. Navigate to your resource group
+2. Open the Log Analytics Workspace (named `log-expensemgmt-<unique>`)
+3. Use **Logs** to query diagnostic data with KQL
+4. Use **Insights** for pre-built dashboards
+
+Example KQL queries:
+
+```kusto
+// View App Service HTTP requests in the last hour
+AppServiceHTTPLogs
+| where TimeGenerated > ago(1h)
+| project TimeGenerated, CsMethod, CsUriStem, ScStatus, TimeTaken
+
+// View SQL Database errors
+AzureDiagnostics
+| where ResourceProvider == "MICROSOFT.SQL"
+| where Category == "Errors"
+| project TimeGenerated, error_number_d, error_message_s
+```
+
+### Application Insights Configuration
+
+After deployment, configure your app to send telemetry by setting:
+
+```powershell
+$appInsightsConnString = (az deployment group show --resource-group $resourceGroup --name main --query "properties.outputs.appInsightsConnectionString.value" -o tsv)
+
+az webapp config appsettings set `
+  --resource-group $resourceGroup `
+  --name $webAppName `
+  --settings "APPLICATIONINSIGHTS_CONNECTION_STRING=$appInsightsConnString"
+```
 
 ## Bicep Guidelines
 
