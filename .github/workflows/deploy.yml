@@ -69,10 +69,10 @@ jobs:
 
       - name: Install go-sqlcmd
         run: |
-          curl -sSL https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
-          sudo add-apt-repository "$(curl -sSL https://packages.microsoft.com/config/ubuntu/$(lsb_release -rs)/prod.list)"
-          sudo apt-get update
-          sudo apt-get install -y sqlcmd
+          # Download and install go-sqlcmd directly (works on Ubuntu 24.04)
+          curl -sSL -o sqlcmd.tar.bz2 https://github.com/microsoft/go-sqlcmd/releases/download/v1.8.0/sqlcmd-linux-amd64.tar.bz2
+          sudo tar -xjf sqlcmd.tar.bz2 -C /usr/local/bin
+          rm sqlcmd.tar.bz2
           sqlcmd --version
 
       - name: Deploy Infrastructure

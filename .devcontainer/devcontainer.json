@@ -29,7 +29,7 @@
     }
   },
 
-  "postCreateCommand": "curl -sSL https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add - && sudo add-apt-repository \"$(curl -sSL https://packages.microsoft.com/config/ubuntu/$(lsb_release -rs)/prod.list)\" && sudo apt-get update && sudo apt-get install -y sqlcmd && cd src/ExpenseManagement && dotnet restore",
+  "postCreateCommand": "curl -sSL -o /tmp/sqlcmd.tar.bz2 https://github.com/microsoft/go-sqlcmd/releases/download/v1.8.0/sqlcmd-linux-amd64.tar.bz2 && sudo tar -xjf /tmp/sqlcmd.tar.bz2 -C /usr/local/bin && rm /tmp/sqlcmd.tar.bz2 && cd src/ExpenseManagement && dotnet restore",
 
   "forwardPorts": [5000, 5001],
 
