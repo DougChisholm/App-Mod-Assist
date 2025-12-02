@@ -282,26 +282,34 @@ if (-not $SkipDatabaseSetup) {
     Write-Step "Configuring managed identity database roles"
     if ($sqlcmdPath) {
         Write-Info "Setting up database user for: $managedIdentityName"
+        Write-Info "Managed Identity Client ID: $managedIdentityClientId"
         
         # In CI/CD, use AzCli auth to leverage the az login OIDC token
         $authMethod = if ($IsCI) { "ActiveDirectoryAzCli" } else { "ActiveDirectoryDefault" }
         
+        # Convert the Client ID (GUID) to a SID format for SQL Server
+        # This avoids needing Directory Reader permissions on the SQL Server
+        # The SID is derived from the Client ID GUID bytes
+        $guidBytes = [System.Guid]::Parse($managedIdentityClientId).ToByteArray()
+        $sidHex = "0x" + [System.BitConverter]::ToString($guidBytes).Replace("-", "")
+        
+        Write-Info "Using SID-based user creation (no Directory Reader required)"
+        
         try {
-            # Drop user if exists, then recreate
-            sqlcmd -S $serverFqdn -d "Northwind" "--authentication-method=$authMethod" `
-                -Q "IF EXISTS (SELECT * FROM sys.database_principals WHERE name = '$managedIdentityName') DROP USER [$managedIdentityName];"
+            # Drop user if exists, then recreate using SID
+            # This approach works without requiring the SQL Server to have Directory Reader permissions
+            $createUserSql = @"
+IF EXISTS (SELECT * FROM sys.database_principals WHERE name = '$managedIdentityName')
+    DROP USER [$managedIdentityName];
+
+CREATE USER [$managedIdentityName] WITH SID = $sidHex, TYPE = E;
+
+ALTER ROLE db_datareader ADD MEMBER [$managedIdentityName];
+ALTER ROLE db_datawriter ADD MEMBER [$managedIdentityName];
+GRANT EXECUTE TO [$managedIdentityName];
+"@
             
-            sqlcmd -S $serverFqdn -d "Northwind" "--authentication-method=$authMethod" `
-                -Q "CREATE USER [$managedIdentityName] FROM EXTERNAL PROVIDER;"
-            
-            sqlcmd -S $serverFqdn -d "Northwind" "--authentication-method=$authMethod" `
-                -Q "ALTER ROLE db_datareader ADD MEMBER [$managedIdentityName];"
-            
-            sqlcmd -S $serverFqdn -d "Northwind" "--authentication-method=$authMethod" `
-                -Q "ALTER ROLE db_datawriter ADD MEMBER [$managedIdentityName];"
-            
-            sqlcmd -S $serverFqdn -d "Northwind" "--authentication-method=$authMethod" `
-                -Q "GRANT EXECUTE TO [$managedIdentityName];"
+            sqlcmd -S $serverFqdn -d "Northwind" "--authentication-method=$authMethod" -Q $createUserSql
             
             Write-Success "Managed identity database roles configured"
         } catch {
