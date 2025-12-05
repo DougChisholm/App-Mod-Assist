@@ -1,1 +1,0 @@
-[NOT USED?] enable managed identity for the App Service so it can talk to azure sql. Also create bicep code to create the user role in the database so the app service managed identity can connect and take actions in the database

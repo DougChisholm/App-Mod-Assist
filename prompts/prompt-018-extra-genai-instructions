@@ -1,39 +1,41 @@
-Extra instructions for Creating Azure infrastructure with Bicep and deployment script that properly configures Azure OpenAI integration with App Service using Managed Identity authentication.
+Extra guidance for integrating Azure OpenAI with the App Service using Managed Identity authentication.
 
-Bear the below in mind when creating the bicep for the genai resources and endpoints:
+## The Circular Dependency Problem
 
-CRITICAL REQUIREMENTS:
+When configuring OpenAI settings, there's a chicken-and-egg problem in Bicep:
 
-1. **Bicep Structure:**
-   - Create app-service.bicep that creates the Managed Identity and App Service
-   - Create genai.bicep that creates Azure OpenAI and grants the Managed Identity the "Cognitive Services OpenAI User" role
-   - In genai.bicep, output: openAIEndpoint, openAIModelName, openAIName
-   - In main.bicep, conditionally deploy genai.bicep and output the OpenAI configuration values
+1. The App Service needs the Managed Identity first
+2. The GenAI resources need the Managed Identity ID for role assignments
+3. The App Service settings need the OpenAI endpoint (which doesn't exist until GenAI deploys)
 
-2. **Deployment Script MUST:**
-   - Deploy the Bicep infrastructure first
-   - After deployment completes, retrieve the OpenAI endpoint and model name from deployment outputs using:
-     ```bash
-     az deployment group show --query "properties.outputs.openAIEndpoint.value"
-     ```
-   - Configure the App Service settings with the retrieved values using:
-     ```bash
-     az webapp config appsettings set --settings \
-         "OpenAI__Endpoint=$OPENAI_ENDPOINT" \
-         "OpenAI__DeploymentName=$OPENAI_MODEL_NAME"
-     ```
-   - This MUST happen AFTER infrastructure deployment, not during it
+This can't be solved in Bicep alone. The deployment script must configure App Service settings AFTER infrastructure deployment completes.
 
-3. **Why this is necessary:**
-   - Bicep cannot configure these settings directly due to circular dependency
-   - App Service needs the Managed Identity first
-   - GenAI resources need the Managed Identity ID for role assignment
-   - App settings need the OpenAI endpoint (which doesn't exist until GenAI deployment completes)
-   - The deployment script breaks this cycle by configuring settings post-deployment
+## Bicep Structure
 
-4. **Application Code:**
-   - Use Azure.Identity package with DefaultAzureCredential
-   - Configure OpenAIClient with Managed Identity, not API keys
-   - Read OpenAI:Endpoint and OpenAI:DeploymentName from configuration
+Organise the templates like this:
 
-Do NOT try to configure OpenAI__Endpoint or OpenAI__DeploymentName in the Bicep app settings. This will create a circular dependency that cannot be resolved in Bicep alone.
+- **app-service.bicep**: Creates the Managed Identity and App Service
+- **genai.bicep**: Creates Azure OpenAI, grants the Managed Identity the "Cognitive Services OpenAI User" role, and outputs openAIEndpoint, openAIModelName, openAIName
+- **main.bicep**: Orchestrates everything and conditionally deploys genai.bicep
+
+## Deployment Script Steps
+
+After the Bicep deployment finishes, the script must:
+
+1. Retrieve the OpenAI endpoint and model name from deployment outputs:
+
+       az deployment group show --query "properties.outputs.openAIEndpoint.value"
+
+2. Configure the App Service with these values:
+
+       az webapp config appsettings set --settings "OpenAI__Endpoint=$OPENAI_ENDPOINT" "OpenAI__DeploymentName=$OPENAI_MODEL_NAME"
+
+Do NOT try to set OpenAI__Endpoint or OpenAI__DeploymentName in the Bicep app settings directly - this creates an unresolvable circular dependency.
+
+## Application Code
+
+The C# code should:
+
+- Use the Azure.Identity package with DefaultAzureCredential (not API keys)
+- Read settings from configuration: OpenAI:Endpoint and OpenAI:DeploymentName
+- Create the OpenAIClient using the managed identity for authentication

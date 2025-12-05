@@ -1,5 +1,14 @@
-error handle so that the interface returns dummy data if there are issues connecting to database, 
-  also put the error in a header bar on the page explaining the error in detail and referencing the file and code line that has the error 
-  but dont show the code itself.
+Add graceful error handling so the application still works (with dummy data) when the database connection fails.
 
-  explain in detail any managed identity issues explain the exact fix. disaply all this in the header bar error text
+When errors occur, display them prominently in a header bar at the top of the page. Include:
+- A clear description of what went wrong
+- The file and line number where the error occurred (but don't show the actual code)
+- For managed identity errors, provide specific guidance on how to fix them
+
+This helps users troubleshoot without exposing sensitive code details.
+
+Common managed identity issues to explain:
+- Missing AZURE_CLIENT_ID environment variable
+- Connection string without the User Id parameter
+- Managed identity not granted database permissions
+- Wrong identity type (system-assigned vs user-assigned confusion)

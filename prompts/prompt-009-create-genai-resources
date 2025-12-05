@@ -1,32 +1,26 @@
-create the Azure resources needed for a generative AI chat user interface including any new azure resource IaC, 
-endpoints, keys etc but make sure to use the managed identity you already created and assign it to any Azure Open AI or 
-Cognitive Search (AI Search) resources you create so that all these services can communicate with each other.
+Create the Azure resources needed for a generative AI chat interface.
 
-use low cost S0 SKUs where possible (for Azure Open AI and Cognitivie services) 
-and always use the "GPT-4o" model in "swedencentral" even if the resrouce group is "UKSOUTH" do not use any other models.
+This includes Azure OpenAI and Azure AI Search (formerly Cognitive Search). Use the managed identity created earlier so all these services can authenticate with each other securely without API keys.
 
-to be clear even if the main bicep is passing the resource parameters to other bicep files make sure that the AOAI instance is deployed to swedencentral
-to ensure no quota issues for POCs
+Cost considerations:
+- Use S0 (low cost) SKUs where possible for Azure OpenAI and Cognitive Services
+- Always use the "GPT-4o" model deployed in Sweden Central (this region has better quota availability for proof-of-concept projects)
+- Even if the main resource group is in UK South, the Azure OpenAI instance should be in Sweden Central
+- Use a capacity of 8 for the model deployment:
 
-use capacity of 8 as below:
+      sku: {
+          name: 'Standard'
+          capacity: 8
+      }
 
-sku: {
-    name: 'Standard'
-    capacity: 8
-  }
+Important naming rules:
+- Azure OpenAI and AI Search resource names must be lowercase
+- The uniqueString() function can generate uppercase characters, so apply toLower() to the generated names
+- This avoids the error: "Azure OpenAI requires the customSubDomainName property to be lowercase"
 
-make sure the azureopenai and aisearch resources have lower cased names to avoid this potential issue:
+Store the configuration for these resources (endpoints, model names) in a GenAISettings configuration section.
 
-"Azure OpenAI requires the customSubDomainName property to be lowercase,
-but the Bicep template was generating names with uppercase letters from the uniqueString() function."
-
-
-store the settings for these new resources in a GenAISettings file.
-
-Azure role assignments require the Principal ID (a GUID), not the resource ID. The Principal ID is available as managedIdentity.properties.principalId.
-
-You need to:
-
-Output the principalId from app-service.bicep
-Pass it to genai.bicep
-Use it in the role assignments.
+Role assignments require the Principal ID (a GUID that identifies the managed identity), not the resource ID. You'll need to:
+1. Output the principalId from app-service.bicep
+2. Pass it to genai.bicep
+3. Use it when creating role assignments for "Cognitive Services OpenAI User" and similar roles

@@ -1,7 +1,36 @@
-when starting the task create a plan of what you will do and detail it with a list of checkboxes in the pull request you create and include a final taks called "Completed all tasks" which you only tick when all your work and testing is done
+When starting this task, create a plan with checkboxes in the pull request you create. Include a final task called "Completed all tasks" that you only tick when everything is done and tested.
 
-make sure to create one summary script to deploy any infrastructure as code and also an instruction to deploy that summary script in one line in the terminal (assuming all variables in the other scripts have been set)
+## Deployment Structure
 
-if other parts of my instruction ask for scripts try to combine them sensibly into this summary so the output has separate IaC files for each service deployed to azure plus the summary script calling them all.
+Create TWO separate deployment workflows:
 
-make sure to use the screenshots found in the repo along with the data base schema to ensure that all APIs and functionality matches those
+### 1. Infrastructure Deployment (deploy-infra/)
+
+This handles all Azure resource creation:
+
+- Create a `main.bicep` file that orchestrates all infrastructure modules
+- Create a `main.bicepparam` file for parameters (preferred over parameters.json for better type safety and IDE support)
+- Create separate Bicep modules for each resource type (app-service.bicep, azure-sql.bicep, managed-identity.bicep, monitoring.bicep, etc.)
+- Validate all Bicep code before deployment
+- Document deployment commands in `deploy-infra/README.md` with copy-paste ready examples
+
+Example deployment command:
+
+    az deployment group create --resource-group $resourceGroup --template-file ./deploy-infra/main.bicep --parameters @./deploy-infra/main.bicepparam
+
+### 2. Application Code Deployment (deploy-app/)
+
+This deploys the actual application and assumes infrastructure already exists:
+
+- Keep completely separate from infrastructure deployment
+- Provide Azure CLI or PowerShell commands to deploy the code
+- Document everything in `deploy-app/README.md`
+
+### Important Guidelines
+
+- Do NOT create .sh shell scripts - use PowerShell-compatible commands
+- Use semicolons or backticks for line continuation, not backslashes
+- Use `.bicepparam` files for Bicep parameters (not inline parameters or legacy parameters.json)
+- Provide clear variable setup instructions at the top of each README
+
+Refer to the screenshots in the repository and the database schema to ensure all APIs and functionality match the original application.

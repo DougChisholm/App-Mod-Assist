@@ -1,1 +1,8 @@
-dont hit any database and instead return dummy data. Make sure any dates such as new DateTime(2023, 12, 12) all have month and day values below 13 in case the month and day get confused. Try to use DateTime() minus x number of days instead of constructing dates to avoid month day date format issues (UK vs US etc)
+Return dummy data instead of connecting to the database. This is useful for testing or when the database isn't available.
+
+When creating test dates, be careful about date format confusion between UK (day/month) and US (month/day) formats. To avoid this:
+
+- Keep both month and day values below 13 (e.g., use day 5 of month 3, not day 15 of month 12)
+- Better yet, calculate dates relative to today using DateTime.Now.AddDays(-x) instead of hardcoding specific dates
+
+This prevents bugs where dates like "12/03/2023" display differently depending on regional settings.

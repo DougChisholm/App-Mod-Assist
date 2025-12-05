@@ -1,0 +1,17 @@
+The application should access all data through stored procedures rather than embedding SQL queries in the code. This provides better security (prevents SQL injection), performance (query plans are cached), and maintainability (database changes don't require code redeployment).
+
+Create a stored-procedures.sql file at the repository root containing all the stored procedures the application needs.
+
+Key requirements:
+
+- Use CREATE OR ALTER PROCEDURE syntax so the script can run multiple times without errors
+- Every stored procedure called by the application code must exist in this file
+- The application code should never construct dynamic SQL or access tables directly
+
+The infrastructure deployment script (deploy-infra/deploy.ps1) automatically imports these stored procedures using sqlcmd with Entra ID authentication.
+
+For manual execution, use sqlcmd with the --authentication-method=ActiveDirectoryDefault argument.
+
+Don't use Python scripts for executing SQL. The sqlcmd tool handles GO batch separators natively and is the recommended approach for all database script execution.
+
+

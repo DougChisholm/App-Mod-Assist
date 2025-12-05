@@ -1,0 +1,46 @@
+Create a PowerShell deployment script called deploy.ps1 in the deploy-infra folder that fully automates the infrastructure deployment.
+
+The script should accept parameters for the resource group name (required), Azure region (required), a base name for resources (optional, defaults to "expensemgmt"), a switch to deploy GenAI resources like Azure OpenAI and AI Search, and a switch to skip database setup for redeployments.
+
+The deployment process should:
+
+1. Check that Azure CLI is installed and the user is logged in
+2. Automatically retrieve the current user's Azure AD credentials (Object ID and User Principal Name)
+3. Create the resource group if needed
+4. Deploy all infrastructure using the Bicep templates
+5. Wait for SQL Server to become ready before proceeding
+6. Add the user's current IP address to the SQL Server firewall
+7. Import the database schema using sqlcmd with Entra ID authentication
+8. Create a database user for the managed identity and grant it read, write, and execute permissions
+9. Create the stored procedures required by the application
+10. Configure the App Service with ALL required settings (see critical settings below)
+11. If GenAI resources were deployed, configure the OpenAI and Search endpoints
+12. Save a deployment context file (.deployment-context.json) at the repository root
+
+Critical App Service settings that MUST be configured during infrastructure deployment:
+
+- AZURE_CLIENT_ID: The managed identity client ID (required for DefaultAzureCredential)
+- ConnectionStrings__DefaultConnection: The full SQL connection string with Managed Identity authentication
+- APPLICATIONINSIGHTS_CONNECTION_STRING: For Application Insights telemetry
+
+The SQL connection string format MUST be:
+Server=tcp:{sqlServerFqdn},1433;Initial Catalog=Northwind;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;Authentication=Active Directory Managed Identity;User Id={managedIdentityClientId};
+
+Without these settings, the application will fail to connect to the database even if the managed identity has correct permissions.
+
+The deployment context file enables seamless handoff to the application deployment script (deploy-app/deploy.ps1). Include the resource group, web app name, SQL server FQDN, and managed identity client ID in this context file.
+
+The script should provide clear progress indicators, handle errors gracefully, and display a summary of deployed resources at the end.
+
+Critical implementation details:
+
+1. When calling sqlcmd from PowerShell, quote the authentication argument to prevent parsing errors:
+   sqlcmd -S $serverFqdn -d "Northwind" "--authentication-method=ActiveDirectoryDefault" -i $schemaFile
+
+2. Always use fresh resource group names for deployments. Reusing resource groups with partially deployed resources can cause ARM caching issues, particularly with Log Analytics Workspace references.
+
+3. The script should warn users if they're running PowerShell 5.1 and recommend upgrading to PowerShell 7+.
+
+4. VS Code's integrated terminal may use a cached PATH. If sqlcmd errors occur, recommend running from a standalone PowerShell terminal or restarting VS Code.
+
+Prerequisites: Azure CLI, go-sqlcmd (install with winget install sqlcmd), and PowerShell 7+ recommended.
