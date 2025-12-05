@@ -1,3 +1,9 @@
-this is an example file - the name should be names prompt-00X-three-word-description with best three words that describe the prompt functionality such as: "prompt-001-create-app-bicep" which might have file contexts like "create the bicep code needed to deploy an app service in azure with sku xyz"
+This is an example showing how prompt files should be named and structured.
 
-the coding agent will read and execute all prompts listed in the prompt-order file
+Naming convention: prompt-00X-three-word-description
+
+Choose three words that describe what the prompt does. For example:
+- prompt-001-create-app-bicep - for creating App Service infrastructure
+- prompt-002-create-azure-sql - for creating SQL database infrastructure
+
+The coding agent reads and executes all prompts listed in the prompt-order file, so make sure your new prompt is added there.

@@ -1,15 +1,12 @@
-Create an asp.net razor pages c sharp code base that has the functionality found in the screenshots in the 
-legacy_screenshots folder. 
+Build an ASP.NET Razor Pages application in C# that recreates the functionality shown in the screenshots in the Legacy-Screenshots folder.
 
-make sure the index page for the user interface has buttons or links to be able to perform all the sensible database operations to add and read data 
-as well as any filters to change the listed data.
+The main Index page should have buttons or links for all the standard database operations like adding records, viewing data, and filtering results.
 
-use a clean modern user interface like this one:
+Aim for a clean, modern user interface similar to this example:
 https://cdn.dribbble.com/userupload/4279134/file/original-5e630140a5ad559268aaf9fd3650b403.png?resize=2048x1536&vertical=center
 
-make sure the app targets .NET 8 (LTS)
-<TargetFramework>net8.0</TargetFramework>
+Target .NET 8 (the current Long Term Support version):
 
-
+    <TargetFramework>net8.0</TargetFramework>
 
 

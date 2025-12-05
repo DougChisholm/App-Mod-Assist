@@ -1,19 +1,29 @@
-use the SQL database you created earlier:
+Use the SQL database created by the infrastructure deployment.
 
-Server=tcp:<example>.database.windows.net,1433;Initial Catalog=<ExampleDB>;Encrypt=True;
-TrustServerCertificate=False;Connection Timeout=30;
+Connection string format for Azure SQL with Managed Identity:
 
-connect using the managedidentiy you created before using this format:
+Server=tcp:{server}.database.windows.net,1433;Initial Catalog=Northwind;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;Authentication=Active Directory Managed Identity;User Id={managed-identity-client-id};
 
-string connectionString = "Server=tcp:<server>.database.windows.net;" +
-                          "Database=<db>;" +
-                          "Authentication=Active Directory Managed Identity;" +
-                          "User Id=<client-id-of-user-assigned-mi>;";
+Critical requirements:
 
-do not create any other kind of db access like user name password or tokens just managed identity to avoid this potential issue:
+1. The connection string MUST include the User Id parameter set to the managed identity's Client ID (not Object ID or Principal ID). Without this, DefaultAzureCredential cannot determine which identity to use.
 
-"The connection is failing because your code is trying to use access token authentication (setting connection.AccessToken), 
-but you also have Authentication=Active Directory Managed Identity in the connection string - 
-these two approaches conflict with each other."
+2. Do NOT use any other authentication methods like username/password, access tokens, or connection.AccessToken. Use only "Authentication=Active Directory Managed Identity" in the connection string.
 
-Also add instruction to run the app locally by changing the connection string in appsettings to use "Authentication=Active Directory Default" which will ask local user to login with az login
+3. The appsettings.json should have a placeholder connection string. The actual values are set via App Service configuration (environment variables) during infrastructure deployment.
+
+4. For local development, use "Authentication=Active Directory Default" instead of "Active Directory Managed Identity". This allows developers to authenticate using their Azure CLI credentials (az login).
+
+Example appsettings.Development.json for local development:
+
+    "ConnectionStrings": {
+        "DefaultConnection": "Server=tcp:sql-server.database.windows.net,1433;Initial Catalog=Northwind;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;Authentication=Active Directory Default;"
+    }
+
+Common issues and fixes:
+
+- "Unable to load the proper Managed Identity": The AZURE_CLIENT_ID environment variable is not set or the User Id is missing from the connection string
+- "These two approaches conflict with each other": You have both AccessToken and Authentication in the connection string - remove the AccessToken approach
+- "Login failed for user": The managed identity database user was not created or does not have proper permissions
+
+The infrastructure deployment script (deploy-infra/deploy.ps1) automatically configures the ConnectionStrings__DefaultConnection app setting with the correct values.

@@ -1,26 +1,25 @@
-create the files needed in a new folder called chatui that uses the azure genai resoruces and setting to display a chat UI to be able to interact with the database via the APIs using natural language
-also bear in mind the contextual info found in the RAG folder by using the Retrieval-Augmented Generation pattern.
+Create a chat interface as a Razor Page within the main application (src/ExpenseManagement/Pages/Chat.cshtml) that lets users interact with the database using natural language.
 
-if you need to create more azure resources for the RAG process then you can but make sure they are the lowest cost development SKUs preferably S0.
+Do NOT create a separate "chatui" folder - the chat should be integrated into the existing ASP.NET application.
 
-make sure that any time the chatUI is asked to list things from the database it displays the list in a pretty format.
+The chat should:
+- Connect to the Azure GenAI resources (OpenAI and AI Search) configured earlier
+- Use the application's APIs to read and write data - never query the database directly
+- Apply the RAG (Retrieval-Augmented Generation) pattern using any contextual information in the RAG folder
 
-bearing in mind the list is embedded in the chat bubble so: Escape HTML first - Converts special characters (<, >, &, etc.) to HTML entities to prevent XSS and stop raw HTML from displaying
+If you need additional Azure resources for RAG, use the lowest cost development SKUs (preferably S0).
 
-Then apply formatting - After escaping, converts markdown-style formatting:
+When the chat displays lists from the database, format them nicely within the chat bubble. Since the list appears inside a chat message, follow this approach:
 
-**text** → <strong>text</strong> for bold
-Lines starting with 1.  → wrapped in <ol><li> for numbered lists
-Lines starting with -  or *  → wrapped in <ul><li> for bullet lists
-\n → <br> for line breaks
-Use innerHTML instead of textContent - So the formatted HTML tags are rendered as actual HTML elements instead of displayed as text
+1. **Escape HTML first** - Convert special characters (<, >, &) to HTML entities to prevent security issues and stop raw HTML from displaying as text
 
-The problem before:
+2. **Then apply formatting** - After escaping, convert markdown-style syntax to HTML:
+   - `**text**` becomes `<strong>text</strong>` for bold
+   - Lines starting with `1.` become ordered lists (`<ol><li>`)
+   - Lines starting with `-` or `*` become bullet lists (`<ul><li>`)
+   - `\n` becomes `<br>` for line breaks
 
-Used messageDiv.textContent = text which displayed HTML tags as plain text like <li>Item</li>
-The fix:
+3. **Use innerHTML, not textContent** - So the formatted HTML actually renders as styled elements instead of showing the raw tags
 
-Use messageDiv.innerHTML = formattedText which renders the HTML properly
-But escape the original text first to prevent security issues
-This ensures lists show up as actual formatted lists with bullets/numbers, and bold text appears bold, instead of showing the raw HTML markup.
+Without this approach, you'll see raw HTML tags like `<li>Item</li>` displayed as plain text instead of actual formatted lists.
 

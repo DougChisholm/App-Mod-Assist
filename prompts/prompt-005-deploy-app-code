@@ -1,17 +1,23 @@
-create a zip file for the app code so that it can be deployed to azure in the following manner:
+Create a PowerShell deployment script called deploy.ps1 in the deploy-app folder that automates application code deployment to Azure App Service.
 
-az webapp deploy \
-  --resource-group MyRG \
-  --name MyWebApp \
-  --src-path ./app.zip
+The script should work seamlessly with the infrastructure deployment by reading the deployment context file (.deployment-context.json) created by deploy-infra/deploy.ps1. When this context file exists, the script should not require any parameters.
 
-Also add the correct terminal command to any deployment scripts you are creating or have created to deploy it.
+The script should accept optional parameters for the resource group name and web app name, which override values from the context file if provided. Include switches to skip the build step (for redeployments) and to configure app settings after deployment.
 
-Make sure app.zip or any .zip files are not excluded by the gitignore file so you can add the app.zip file to the repo for use later in the script
+The deployment process should:
 
-Make sure the app.zip folder unzips to give app folder that has dll file inside it,
-do not add another folder level in between like publish folder or other.
+1. Check for a .deployment-context.json file at the repository root and load values from it if available
+2. Validate that Azure CLI is installed and the user is logged in
+3. Build and publish the .NET application using dotnet publish
+4. Create a deployment zip package with the DLL files at the root level (not in a subdirectory)
+5. Deploy to Azure App Service using az webapp deploy with the clean and restart flags
+6. Clean up the temporary zip file after deployment
+7. Display the application URLs including the /Index page and /swagger endpoint
 
-to be clear you must avoid this issue: "The issue is that the files are in an app/ subdirectory within the zip file. Azure App Service expects the files to be at the root of the zip."
+The zip file structure is critical - Azure App Service expects the DLL files at the root of the zip, not inside a subdirectory like publish/ or app/.
 
-make it clear to the user somewhere that the URL to view the app is <app url>/Index so they dont just navigate to the root url
+When the ConfigureSettings switch is used, the script should configure the connection string and managed identity client ID using values from the deployment context or by querying Azure deployment outputs.
+
+Also create a deploy-app/README.md file documenting both the automated script usage and manual deployment steps. Make it clear that after running deploy-infra/deploy.ps1, users can simply run deploy-app/deploy.ps1 with no parameters.
+
+The application URL to view the main interface is /Index not the root URL - make this clear to users.

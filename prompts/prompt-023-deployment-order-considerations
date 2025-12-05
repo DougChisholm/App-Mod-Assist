@@ -1,17 +1,73 @@
-Follow this deployment order including the 30 second wait to ensure each step has the resource before it ready:
+## Infrastructure vs Application Deployment Separation
 
-1. Deploy the resource group, App Service, and SQL Database (currently running)
-2. Configure App Service settings
-3. Wait 30 seconds for SQL Server to be fully ready
-4. Add IP for the local user’s machine to the firewall
-5. Install Python dependencies
-6. Import the database schema
-7. Configure database roles for the managed identity
-8. Deploy the application code
+There are two distinct deployment phases, each with its own automated PowerShell script.
 
-Also use uniqueString(resourceGroup().id) to make the resources uniue and do not use timestamps such as utcNow for uniqueness.
+### Phase 1: Infrastructure Deployment
 
-Also bear in mind these items:
+Run the infrastructure deployment script:
 
-The Bicep deployment was failing due to several issues: First, the utcNow() function was being used in a variable declaration in app-service.bicep, which isn't allowed - it can only be used as a parameter default value, so I switched to static naming instead. Second, the main.bicep file was missing the adminObjectId and adminLogin parameters that the deployment script was trying to pass for SQL Server Entra ID authentication, and these weren't being forwarded to the azure-sql module. Third, the deployment script had incorrect syntax trying to pass azure-sql.bicep as a parameter rather than passing the actual parameter values to the main template. Fourth, the conditional GenAI module outputs needed null-safe operators (?. and ??) to prevent errors when the module isn't deployed. Finally, azure-sql.bicep was missing the managedIdentityPrincipalId parameter declaration that main.bicep was trying to pass. These fixes ensure proper parameter flow, deterministic resource naming, and safe handling of conditional resources.
+    .\deploy-infra\deploy.ps1 -ResourceGroup "rg-yourapp-YYYYMMDD" -Location "uksouth"
 
+Important: Always use a unique resource group name (include date/time suffix). Reusing resource groups with partially deployed resources can cause ARM caching issues, particularly with Log Analytics Workspace references that result in "Could not retrieve the Log Analytics workspace from ARM" errors.
+
+This script handles everything automatically: Azure CLI validation, credential retrieval, resource group creation, Bicep deployment, SQL Server configuration, firewall rules, database schema import, stored procedures, managed identity permissions, and App Service settings.
+
+**Critical: The infrastructure deployment script MUST configure the App Service with:**
+- `ConnectionStrings__DefaultConnection` - The SQL connection string with Managed Identity authentication
+- `AZURE_CLIENT_ID` - The user-assigned managed identity client ID
+
+Without these settings, the application will fail to connect to the database with errors like "System.InvalidOperationException: A relational store has been configured without specifying either the DbConnection or connection string to use."
+
+At the end, the script saves a deployment context file (.deployment-context.json) containing all the resource names and configuration values needed for the next phase.
+
+### Phase 2: Application Deployment
+
+After infrastructure deployment completes, run the application deployment script with no parameters:
+
+    .\deploy-app\deploy.ps1
+
+The script automatically reads the deployment context file created by the infrastructure script, so you don't need to specify the resource group or web app name. It builds the .NET application, creates a deployment package, and deploys to Azure App Service.
+
+### Seamless Deployment Flow
+
+The two scripts are designed to work together without manual parameter entry between them. The deployment context file passes resource names and configuration values from infrastructure deployment to application deployment automatically.
+
+### Known Issues and Workarounds
+
+1. VS Code integrated terminal may use cached PATH: If sqlcmd produces errors about unrecognized arguments, the terminal may be using the legacy ODBC sqlcmd instead of modern go-sqlcmd. Either restart VS Code or run from a standalone PowerShell terminal.
+
+2. PowerShell argument parsing: The --authentication-method argument must be quoted in PowerShell scripts to prevent parsing errors.
+
+3. Resource group reuse: Always use fresh resource group names. If a deployment fails partway through, delete the resource group before retrying.
+
+### Bicep Best Practices
+
+Use uniqueString(resourceGroup().id) to generate deterministic unique names for resources. Never use timestamps like utcNow() in variable declarations as this is not allowed in Bicep.
+
+Key considerations for Bicep templates:
+
+**Naming and References:**
+
+- All resource names should be lowercase to comply with Azure naming requirements
+- Use symbolic resource references instead of string-based references (e.g., `appService.outputs.webAppId` not resource ID strings)
+- Do NOT use the `name` property on module declarations - use the symbolic name directly
+
+**Parameters:**
+
+- Use `.bicepparam` files instead of `parameters.json` for better type safety and IDE support
+- Example: `main.bicepparam` with `using './main.bicep'` at the top
+- Add descriptions to all parameters using `@description()` decorator
+
+**Conditional Resources:**
+
+- Conditional module outputs must use null-safe operators (?. and ??) to prevent errors when optional modules are not deployed
+- Example: `output openAIEndpoint string = genAI.?outputs.?openAIEndpoint ?? ''`
+
+**Functions and Variables:**
+
+- The utcNow() function can only be used as a parameter default value, not in variable declarations
+- Use `uniqueString(resourceGroup().id)` for deterministic unique names
+
+**Diagnostics:**
+
+- Do not configure diagnostic settings at the SQL Server level as categories like SQLSecurityAuditEvents are not supported - only configure diagnostics at the database level

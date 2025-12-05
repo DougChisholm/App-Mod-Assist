@@ -1,6 +1,13 @@
-[NOT USED] add a setting in the deploy.sh file which will be include-chat-ui and it is defaulted to false which means the genAI IaC will NOT be deployed 
-even though the chat UI files will remain active but not work.
-if this is set to TRUE then the IaC for GenAI will be deployed.
-update the docs to make it clear how to deploy with and without the chat ui, but make sure the default instruction is simple.
-make sure the setting from the deploy.sh file is used as a variable in the genai bicep file and hence changing it once reflects all places in the bicep files.
-to be clear do not use a new variable defining the use of the genai feature in the genai bicep or main bicep files, just pass the setting from the deploy.sh
+[NOT USED - This functionality is now handled by the -DeployGenAI switch in deploy-infra/deploy.ps1]
+
+The infrastructure deployment script supports an optional -DeployGenAI switch that deploys Azure OpenAI and AI Search resources.
+
+To deploy WITHOUT GenAI (basic app only):
+
+    .\deploy-infra\deploy.ps1 -ResourceGroup "rg-yourapp-YYYYMMDD" -Location "uksouth"
+
+To deploy WITH GenAI (full chat experience):
+
+    .\deploy-infra\deploy.ps1 -ResourceGroup "rg-yourapp-YYYYMMDD" -Location "uksouth" -DeployGenAI
+
+The chat UI will still be visible in both cases, but without GenAI resources it will show a message explaining that GenAI services weren't deployed.

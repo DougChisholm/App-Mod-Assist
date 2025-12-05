@@ -1,0 +1,56 @@
+Use sqlcmd (the modern go-sqlcmd tool) for all database operations. Do not use Python scripts for SQL execution.
+
+The deployment script (deploy-infra/deploy.ps1) handles all database operations automatically including schema import, managed identity user creation, role assignments, and stored procedure deployment.
+
+### Authentication Methods
+
+For **local/interactive** execution, use `ActiveDirectoryDefault`:
+```powershell
+sqlcmd -S $serverFqdn -d "Northwind" "--authentication-method=ActiveDirectoryDefault" -i $schemaFile
+```
+
+For **CI/CD with OIDC** (GitHub Actions), use `ActiveDirectoryAzCli`:
+```powershell
+$authMethod = if ($IsCI) { "ActiveDirectoryAzCli" } else { "ActiveDirectoryDefault" }
+sqlcmd -S $serverFqdn -d "Northwind" "--authentication-method=$authMethod" -i $schemaFile
+```
+
+**Why?** `ActiveDirectoryDefault` fails in OIDC environments because it tries `EnvironmentCredential` first, which sees `AZURE_CLIENT_ID` and `AZURE_TENANT_ID` but no `AZURE_CLIENT_SECRET`, causing "Identity not found" errors.
+
+### Creating Database Users for Managed Identity
+
+Do NOT use `CREATE USER ... FROM EXTERNAL PROVIDER` as it requires SQL Server to have Directory Reader permissions in Entra ID.
+
+Instead, use SID-based user creation:
+```powershell
+# Convert Client ID (GUID) to SID hex format
+$guidBytes = [System.Guid]::Parse($managedIdentityClientId).ToByteArray()
+$sidHex = "0x" + [System.BitConverter]::ToString($guidBytes).Replace("-", "")
+
+# Create user with SID
+sqlcmd ... -Q "CREATE USER [$name] WITH SID = $sidHex, TYPE = E;"
+```
+
+### Critical PowerShell Syntax Note
+
+When calling sqlcmd from PowerShell, the --authentication-method argument must be quoted to prevent PowerShell from misinterpreting the double-dash:
+
+    sqlcmd -S $serverFqdn -d "Northwind" "--authentication-method=ActiveDirectoryDefault" -i $schemaFile
+
+Without quotes, PowerShell may produce the error: "'-' or '/' does not have an associated argument."
+
+### Installation
+
+To install go-sqlcmd on Windows: `winget install sqlcmd`
+
+For CI/CD (Ubuntu), download directly from GitHub releases:
+```bash
+curl -sSL -o sqlcmd.tar.bz2 https://github.com/microsoft/go-sqlcmd/releases/download/v1.8.0/sqlcmd-linux-amd64.tar.bz2
+sudo tar -xjf sqlcmd.tar.bz2 -C /usr/local/bin
+```
+
+Important: VS Code's integrated terminal may use a cached PATH that points to the legacy ODBC sqlcmd instead of the modern go-sqlcmd. If you encounter errors about unrecognized arguments, either restart VS Code completely or run the deployment from a standalone PowerShell terminal.
+
+The sqlcmd tool handles GO batch separators natively, which is essential for SQL Server scripts that contain multiple batches.
+
+

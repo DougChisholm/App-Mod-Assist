@@ -1,35 +1,55 @@
-Make sure to add the AZURE_CLIENT_ID environment variable to the App Service configuration:
+## AZURE_CLIENT_ID and ManagedIdentityClientId Configuration
 
+The App Service requires critical settings for managed identity authentication.
 
-az webapp config appsettings set \  --name app-expensemgmt-gxhhiip6yw7iw \  --resource-group rg-expensemgmt-demo \  --settings "AZURE_CLIENT_ID=976d9ad4-1e44-4efa-837a-5cd714ae4a8d"
-This was needed because:
+### 1. AZURE_CLIENT_ID Environment Variable
 
-The App Service uses a user-assigned managed identity (not system-assigned)
-The DefaultAzureCredential in the code needs to know which managed identity to use when there are multiple identities
-Setting AZURE_CLIENT_ID tells DefaultAzureCredential to use the specific managed identity with that client ID
-This allows the ChatService to authenticate with Azure OpenAI using the managed identity
-Without this setting, you got the error: "Unable to load the proper Managed Identity" because DefaultAzureCredential couldn't determine which identity to use.
+This setting tells DefaultAzureCredential which managed identity to use when multiple identities are available:
 
-Pass the App Service's managed identity to the GenAI module:
-- In main.bicep, pass appService.outputs.managedIdentityPrincipalId to the genai module
-- In genai.bicep, accept managedIdentityPrincipalId as a parameter
+    az webapp config appsettings set --name <app-name> --resource-group <rg-name> --settings "AZURE_CLIENT_ID=<managed-identity-client-id>"
+
+This is needed because:
+
+- The App Service uses a user-assigned managed identity (not system-assigned)
+- DefaultAzureCredential needs to know which managed identity to use
+- Without this setting, you get: "Unable to load the proper Managed Identity"
+
+### 2. ManagedIdentityClientId for GenAI Services
+
+The chat service uses ManagedIdentityCredential with explicit client ID for Azure OpenAI authentication:
+
+```csharp
+var managedIdentityClientId = _configuration["ManagedIdentityClientId"];
+Azure.Core.TokenCredential credential;
+
+if (!string.IsNullOrEmpty(managedIdentityClientId))
+{
+    _logger.LogInformation("Using ManagedIdentityCredential with client ID: {ClientId}", managedIdentityClientId);
+    credential = new ManagedIdentityCredential(managedIdentityClientId);
+}
+else
+{
+    _logger.LogInformation("Using DefaultAzureCredential");
+    credential = new DefaultAzureCredential();
+}
+```
+
+### 3. ConnectionStrings__DefaultConnection
+
+The SQL connection string MUST be configured in App Service settings with the Managed Identity authentication format:
+
+    Server=tcp:{server}.database.windows.net,1433;Initial Catalog=Northwind;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;Authentication=Active Directory Managed Identity;User Id={managedIdentityClientId};
+
+Note: The `User Id` in the connection string must be the managed identity CLIENT ID, not the principal ID.
+
+### Critical Deployment Requirement
+
+All three settings (AZURE_CLIENT_ID, ManagedIdentityClientId, ConnectionStrings__DefaultConnection) MUST be configured during infrastructure deployment, not just application deployment. The infrastructure deployment script (deploy-infra/deploy.ps1) handles this automatically.
+
+### Pass Managed Identity to GenAI Module
+
+In main.bicep, pass appService.outputs.managedIdentityPrincipalId to the genai module for role assignments:
+
+- Accept managedIdentityPrincipalId as a parameter in genai.bicep
 - Use this principal ID for role assignments to Azure OpenAI and Cognitive Search
 - Do not create a new managed identity in genai.bicep
-
-Use this code in the chat client macthing ManagedIdentityClientId to the ClientID for the managed identity you created for the app service and
-assigned ot the genai services:
-
- // Use ManagedIdentityCredential with explicit client ID
-            var managedIdentityClientId = _configuration["ManagedIdentityClientId"];
-            Azure.Core.TokenCredential credential;
-            
-            if (!string.IsNullOrEmpty(managedIdentityClientId))
-            {
-                _logger.LogInformation("Using ManagedIdentityCredential with client ID: {ClientId}", managedIdentityClientId);
-                credential = new ManagedIdentityCredential(managedIdentityClientId);
-            }
-            else
-            {
-                _logger.LogInformation("Using DefaultAzureCredential");
-                credential = new DefaultAzureCredential();
-            }

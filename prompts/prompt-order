@@ -4,15 +4,16 @@ prompt-006-baseline-script-instruction,
 prompt-001-create-app-service,
 prompt-017-create-managed-identity,
 prompt-002-create-azure-sql,
-prompt-027-bicep-preview-api,
 prompt-008-use-existing-db,
+prompt-026-Monitoring,
+prompt-027-deployment-script,
+prompt-028-github-actions-cicd,
 prompt-004-create-app-code,
 prompt-022-display-error-messages,
 prompt-005-deploy-app-code,
 prompt-007-add-api-code,
-prompt-016-python-for-sql,
-prompt-021-python-for-dbrole,
-prompt-024-python-stored-procedures,
+prompt-016-sqlcmd-for-sql,
+prompt-024-sqlcmd-stored-procedures,
 prompt-009-create-genai-resources,
 prompt-010-add-chat-ui,
 prompt-020-model-function-calling,
@@ -22,6 +23,34 @@ prompt-019-chatui-deploy-file,
 prompt-011-azure-services-diagram,
 prompt-023-deployment-order-considerations
 
+## CRITICAL: No Shell Scripts
 
+Do NOT create .sh, .bash, or any shell script files. All deployment automation must use PowerShell (.ps1) scripts that work on Windows.
 
-If the agent cant find the exact named matching file it shuld not try to make up any text or code and skip to the next one
+The infrastructure deployment supports a -DeployGenAI switch for optional GenAI resources - there is no need for separate deployment scripts.
+
+## How the Deployment Scripts Work Together
+
+The infrastructure script (prompt-027) and app deployment script (prompt-005) are designed to work as a seamless pair:
+
+1. Run the infrastructure script first - it creates all Azure resources and saves a context file
+2. Run the app script second - it reads that context file so you don't need to re-enter any values
+
+## Critical: Connection String Must Be Set During Infrastructure Deployment
+
+The infrastructure deployment script MUST configure these App Service settings:
+
+- **ConnectionStrings__DefaultConnection** - The SQL connection string with Managed Identity authentication
+- **AZURE_CLIENT_ID** - The managed identity client ID
+
+Without these, the application won't be able to connect to the database, even if all the resources exist.
+
+See prompt-008-use-existing-db and prompt-025-clientid-for-chat for the exact formats required.
+
+## Troubleshooting
+
+If deployment issues occur, check prompt-023-deployment-order-considerations for common problems and solutions.
+
+## Important Note
+
+If the agent cannot find a prompt file with an exact matching name, skip to the next one - don't try to make up content.

@@ -1,5 +1,11 @@
-Create a user assigned managed identity called mid-AppModAssist-[Day-Hour-Minute] (replacing [Day-Hour-Minute] with actual day, month, minute)
-and assign it to this app service so it can later connect to Azure SQL with this identity.
+Create a user-assigned managed identity for the application to use when connecting to Azure SQL and other Azure services.
 
-bear in mind that when using a user-assigned managed identity, the principalId property is not directly on the identity object so avoid trying output it. 
+Name it something like mid-AppModAssist-[timestamp] where the timestamp makes it unique (e.g., including day, hour, and minute).
 
+This identity will be assigned to the App Service so it can authenticate to Azure SQL without storing any passwords or connection secrets.
+
+Note: With user-assigned managed identities, the principalId isn't directly on the identity object - it's nested under properties. Be careful when trying to output this value in Bicep.
+
+Save the Bicep file as `deploy-infra/modules/managed-identity.bicep` and ensure it can be called from `deploy-infra/main.bicep`.
+
+The managed identity must be created early in the deployment process because both the App Service and SQL Server need to reference it.

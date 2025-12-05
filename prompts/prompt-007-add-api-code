@@ -1,3 +1,5 @@
-create all the apis needed to fulfil the functionality in the screenshots and use those in the app code.
-also create the swagger docs so we can see these apis listed in the repo with buttons to test them as just APIs if needed.
-make sure the app and the chat ui use these APIs to intereact with the data base and do not interact with the db directly 
+Create all the API endpoints needed to support the functionality shown in the screenshots. The application code should use these APIs rather than accessing the database directly.
+
+Include Swagger documentation so developers can see all available endpoints and test them interactively through the Swagger UI.
+
+Both the main application and the chat interface must interact with the database through these APIs - they should never query the database directly. This keeps the data access layer centralised and maintainable. 

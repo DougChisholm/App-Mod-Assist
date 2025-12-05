@@ -1,52 +1,60 @@
-make sure the chatui observes function calling so that users can interact with the database in the chat ui. You might consider this type of code:
+Enable the chat interface to actually DO things, not just answer questions.
 
-var options = new ChatCompletionOptions
-{
-    Tools = { 
-        ChatTool.CreateFunctionTool("get_something", "Retrieves something from database"),
-        ChatTool.CreateFunctionTool("create_something", "Creates something in database")
-    }
-};
+Using Azure OpenAI's function calling feature, let the AI assistant execute real operations against the database through the application's APIs. For example, when a user says "add an expense for £50 for lunch", the AI should actually create that expense.
 
-Implement Azure OpenAI function calling in the chat service to enable the AI assistant to execute real
-operations against the application's backend services.
+Example of defining tools:
 
-Requirements:
+    var options = new ChatCompletionOptions
+    {
+        Tools = { 
+            ChatTool.CreateFunctionTool("get_expenses", "Retrieves expenses from database"),
+            ChatTool.CreateFunctionTool("create_expense", "Creates a new expense record")
+        }
+    };
 
-1. Analyze the existing codebase to identify:
-   - Available service methods that should be exposed to the LLM
-   - Their input parameters and return types
-   - Data models used by the application
+## What to Build
 
-2. Define function tools (ChatCompletionsFunctionToolDefinition) for each operation:
-   - Use clear, descriptive function names
-   - Provide detailed descriptions of what each function does
-   - Define JSON schemas for all parameters with proper types and descriptions
-   - Mark required vs optional parameters
+### 1. Identify Available Operations
 
-3. Implement the function calling orchestration loop:
-   - Send function definitions to the LLM with the chat request
-   - Detect when the LLM returns tool_calls in the response
-   - Parse tool call arguments and execute the corresponding service methods
-   - Collect results from executed functions
-   - Send function results back to the LLM as function messages
-   - Repeat if the LLM makes additional tool calls
-   - Return the final natural language response to the user
+Look at the existing service methods and figure out which ones should be available to the AI:
 
-4. Error handling:
-   - Gracefully handle service method failures
-   - Return error information to the LLM so it can inform the user
-   - Validate function arguments before execution
-   - Log errors appropriately
+- What can users query? (get expenses, list categories, etc.)
+- What can users create or modify? (add expense, approve expense, etc.)
+- What parameters does each operation need?
 
-5. Update the system prompt to:
-   - Inform the AI it has access to real functions
-   - List available capabilities
-   - Provide guidance on when to use each function
+### 2. Define Functions for the AI
 
-6. Format responses appropriately:
-   - Serialize complex objects to JSON for function results
-   - Ensure the LLM provides user-friendly responses after executing operations
-   - Handle empty results gracefully
+For each operation, create a function tool definition with:
 
-Only modify the chat service layer - don't change existing backend services or data access code. Use dependency injection to access required services.
+- A clear, descriptive name
+- A helpful description explaining what it does
+- JSON schema for the parameters (types, descriptions, required vs optional)
+
+### 3. Handle the Conversation Loop
+
+The function calling flow works like this:
+
+1. Send the user's message to the AI along with the available functions
+2. If the AI decides to call a function, it returns a tool_call instead of a message
+3. Execute that function against your actual services
+4. Send the result back to the AI
+5. The AI might call more functions or return a final response
+6. Show the user-friendly response to the user
+
+### 4. Handle Errors Gracefully
+
+- If a service call fails, tell the AI what went wrong so it can explain to the user
+- Validate function arguments before executing
+- Log errors for debugging
+
+### 5. Update the System Prompt
+
+Tell the AI what it can do:
+
+- List the available functions
+- Explain when to use each one
+- Give guidance on confirming actions with users
+
+### Important
+
+Only modify the chat service layer. Don't change the existing APIs or data access code - use dependency injection to access those services from the chat service.

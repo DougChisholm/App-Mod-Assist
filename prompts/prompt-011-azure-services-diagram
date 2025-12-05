@@ -1,1 +1,5 @@
-create a simple diagram for the azure services this repo will create when the scripts are all executed - show how they connect to each other
+Create a simple architecture diagram showing all the Azure services that get deployed when the scripts are run.
+
+The diagram should show how the services connect to each other - for example, how the App Service connects to SQL Database using the managed identity, and how it connects to Azure OpenAI for the chat functionality.
+
+Keep it simple and readable - this helps people understand the overall solution at a glance.

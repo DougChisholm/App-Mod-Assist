@@ -1,4 +1,9 @@
-create the bicep code needed to deploy an app service instance to azure in UKSOUTH.
-use standard S1 SKU to avoid cold start when deploying and starting the site
+Create the Bicep code for an Azure App Service in the UK South region.
 
-make sure all bicep files use lower case names for all azure resources not upper case ever.
+Use the Standard S1 pricing tier to avoid cold start delays when the site launches.
+
+All Azure resource names in the Bicep files must be lowercase - never use uppercase characters in resource names.
+
+Save this as `deploy-infra/modules/app-service.bicep` and make sure the main template at `deploy-infra/main.bicep` can call it as a module.
+
+This prompt is for infrastructure only - we're creating the App Service resource itself, not deploying any application code to it.

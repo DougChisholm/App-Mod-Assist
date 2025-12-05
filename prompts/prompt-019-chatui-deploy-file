@@ -1,14 +1,22 @@
-create deploy-with-chat.sh file that will deploy everything including genai services needed for the chat ui. It should deploy the genai services first and then get the resulting endpoints etc 
-for the next steps because it will need to set the app service environment variables for OpenAI and Search:
+The GenAI deployment is handled by a switch on the main infrastructure deployment script, not a separate file.
 
-  OPENAI_ENDPOINT=$(echo $DEPLOYMENT_OUTPUT | jq -r '.openAIEndpoint.value')
-  OPENAI_MODEL_NAME=$(echo $DEPLOYMENT_OUTPUT | jq -r '.openAIModelName.value')
-  SEARCH_ENDPOINT=$(echo $DEPLOYMENT_OUTPUT | jq -r '.searchEndpoint.value')
+Do NOT create separate .sh or bash scripts. Use the existing PowerShell deployment script with the -DeployGenAI switch:
 
-To be clear we will have a deploy.sh that deploys any db and app but no genai services and then a deploy-with-chat.sh that
-deploys the genai bicep files. With both types of deployment 
-there will be a chat user interface reachable but if genai resources 
-were not deployed then the chatui will give dummy responses explaining that the GEnAI services were not deployed
-and to deploy the deploy-with-chat file to get the extra experience
+    .\deploy-infra\deploy.ps1 -ResourceGroup "rg-yourapp-YYYYMMDD" -Location "uksouth" -DeployGenAI
 
+This single script handles everything:
 
+1. Deploys all base infrastructure (App Service, SQL, Managed Identity, Monitoring)
+2. When -DeployGenAI is specified, also deploys Azure OpenAI and AI Search
+3. Retrieves the GenAI endpoints from deployment outputs
+4. Configures the App Service with OpenAI and Search endpoint settings
+5. Saves all configuration to the deployment context file
+
+The chat UI is always deployed as part of the application. When GenAI resources exist, it connects to them. When they don't exist, it shows a friendly message explaining how to deploy with the -DeployGenAI switch.
+
+This approach means:
+
+- One deployment script, not multiple
+- PowerShell only, no bash/shell scripts
+- Consistent deployment experience
+- Easy to add or skip GenAI resources

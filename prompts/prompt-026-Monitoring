@@ -1,0 +1,22 @@
+Set up Azure Monitor to provide centralised logging and diagnostics for all deployed resources.
+
+Create:
+- A Log Analytics Workspace to collect all logs
+- Application Insights connected to that workspace for application-level telemetry
+
+Configure diagnostic settings to capture:
+
+For the App Service:
+- HTTP request logs
+- Console output
+- Application logs
+- Audit events
+- Platform logs
+
+For Azure SQL Database:
+- SQL Insights
+- Automatic Tuning events
+- Query Store statistics
+- Errors, timeouts, blocks, and deadlocks
+
+Important: Only configure diagnostics at the SQL Database level, not the SQL Server level. Trying to enable categories like SQLSecurityAuditEvents or DevOpsOperationsAudit at the server level will cause deployment failures because these aren't supported there.

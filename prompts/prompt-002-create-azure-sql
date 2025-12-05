@@ -1,38 +1,49 @@
-Create the Bicep code needed to deploy an Azure SQL Database with the following security requirements:
+Create the Bicep code for an Azure SQL Database with security-first configuration.
 
-1. **Azure AD-Only Authentication (Required by Policy)**:
-   - Set `azureADOnlyAuthentication: true` in the administrators configuration
-   - This is a mandatory MCAPS governance policy requirement
-   - SQL authentication must be disabled
+Save this as `deploy-infra/modules/azure-sql.bicep` and make sure it can be called from `deploy-infra/main.bicep`.
 
-2. **Entra ID Administrator**:
-   - Configure the SQL server with Entra ID (Azure AD) authentication
-   - Set the person deploying as the named administrator
-   - Include their Object ID and User Principal Name
+## Security Requirements
 
-3. **Managed Identity Access**:
-   - Grant the managed identity created earlier access to the server
-   - Assign ##MS_DatabaseManager## permissions to the managed identity
+### Entra ID Only Authentication (No SQL Passwords)
 
-4. **Database Configuration**:
-   - Create a database named 'Northwind'
-   - Use Basic tier for development
-   - Enable firewall rule for Azure services
+This is a mandatory governance requirement - we must use Azure AD-only authentication:
 
-5. **Schema Import Using Azure Native Methods**:
-   - Use Azure CLI `az sql db import` command or similar native Azure tooling to import the schema
-   - The schema file is located at: `Database-Schema/Northwinds Schema.sql`
-   - Do NOT rely on local Python scripts or ODBC drivers for schema import
-   - The import should use Azure AD authentication
-   - Consider using Azure Deployment Scripts (Microsoft.Resources/deploymentScripts) in Bicep to run the import as part of the infrastructure deployment
-   - Alternatively, provide Azure CLI commands that can be run from Azure Cloud Shell or as part of the deployment pipeline
+- Set `azureADOnlyAuthentication: true` in the administrators configuration
+- SQL username/password authentication must be completely disabled
+- This complies with the MCAPS "[SFI-ID4.2.2] SQL DB - Safe Secrets Standard" policy
 
-**Schema Import Best Practices**:
-- Use `az sql db query` to execute the SQL file directly against the database
-- Authenticate using the Azure AD identity of the deployer
-- Example command structure:
-  ```bash
-  az sql db query --server <server-name> --database Northwind --auth-mode ActiveDirectoryIntegrated --file "Database-Schema/Northwinds Schema.sql"
-  ```
+### Entra ID Administrator
 
-**Important**: The `azureADOnlyAuthentication` must be set to `true` to comply with the "[SFI-ID4.2.2] SQL DB - Safe Secrets Standard" policy enforced by MCAPS Governance.
+Configure the person deploying as the SQL server administrator:
+
+- Use Entra ID (Azure AD) authentication
+- Include their Object ID and User Principal Name
+- The deployment script will retrieve these automatically from Azure CLI
+- Support both User (interactive) and Application (Service Principal for CI/CD) principal types via an `adminPrincipalType` parameter
+
+### Managed Identity Access
+
+The managed identity created earlier needs database access:
+
+- Grant it permissions to connect and manage databases
+- Assign the ##MS_DatabaseManager## server role
+
+## Database Configuration
+
+- Database name: 'Northwind'
+- Tier: Basic (sufficient for development and testing)
+- Enable the firewall rule for Azure services so other Azure resources can connect
+
+## Schema Import
+
+The database schema needs to be imported after the SQL Server is created.
+
+Use sqlcmd (the modern go-sqlcmd tool) with Entra ID authentication - NOT Python scripts or ODBC drivers.
+
+The schema file location: `Database-Schema/database_schema.sql`
+
+The infrastructure deployment script handles this automatically. For manual execution:
+
+    sqlcmd -S "sql-server.database.windows.net" -d "Northwind" "--authentication-method=ActiveDirectoryDefault" -i "Database-Schema/database_schema.sql"
+
+This prompt creates infrastructure only - the SQL Server and database resources. Application code deployment is handled separately.
